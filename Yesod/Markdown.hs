@@ -31,6 +31,7 @@ module Yesod.Markdown
   )
   where
 
+import Data.Aeson
 import Data.Monoid (Monoid)
 import Data.String (IsString)
 import Data.Text (Text)
@@ -56,7 +57,7 @@ import qualified Data.ByteString as B
 import qualified Data.Text       as T
 
 newtype Markdown = Markdown { unMarkdown :: Text }
-    deriving (Eq, Ord, Show, Read, PersistField, PersistFieldSql, IsString, Monoid)
+    deriving (Eq, Ord, Show, Read, PersistField, PersistFieldSql, IsString, Monoid, ToJSON, FromJSON)
 
 instance ToMarkup Markdown where
     -- | Sanitized by default
