@@ -19,17 +19,13 @@ module Yesod.Markdown
   , markdownToHtml
   , markdownToHtmlTrusted
   , markdownFromFile
-  -- * Conversions
-  , parseMarkdown
-  , writePandoc
-  , writePandocTrusted
-  -- * Option sets
-  , yesodDefaultWriterOptions
-  , yesodDefaultReaderOptions
   -- * Form helper
   , markdownField
   )
   where
+
+import Cheapskate
+import Cheapskate.Html
 
 import Data.Aeson
 import Data.Monoid (Monoid)
@@ -42,11 +38,8 @@ import Database.Persist (PersistField)
 import Database.Persist.Sql (PersistFieldSql)
 import System.Directory (doesFileExist)
 
-import Text.Blaze (ToMarkup (toMarkup))
-import Text.Blaze.Html (preEscapedToMarkup)
-import Text.HTML.SanitizeXSS (sanitizeBalance)
+import Text.Blaze
 import Text.Hamlet (hamlet, Html)
-import Text.Pandoc
 
 import Yesod.Core (RenderMessage, HandlerSite)
 import Yesod.Form.Functions (parseHelper)
@@ -74,13 +67,15 @@ markdownField = Field
     }
 
 markdownToHtml :: Markdown -> Html
-markdownToHtml = writePandoc yesodDefaultWriterOptions
-               . parseMarkdown yesodDefaultReaderOptions
+markdownToHtml = renderDoc
+               . markdown (def { allowRawHtml = False })
+               . unMarkdown
 
 -- | No HTML sanitization
 markdownToHtmlTrusted :: Markdown -> Html
-markdownToHtmlTrusted = writePandocTrusted yesodDefaultWriterOptions
-                      . parseMarkdown yesodDefaultReaderOptions
+markdownToHtmlTrusted = renderDoc
+                      . markdown def
+                      . unMarkdown
 
 -- | Returns the empty string if the file does not exist
 markdownFromFile :: FilePath -> IO Markdown
@@ -98,27 +93,3 @@ markdownFromFile f = do
         readFileUtf8 fp = do
             bs <- B.readFile fp
             return $ decodeUtf8With lenientDecode bs
-
-writePandoc :: WriterOptions -> Pandoc -> Html
-writePandoc wo = preEscapedToMarkup . sanitizeBalance . T.pack . writeHtmlString wo
-
-writePandocTrusted :: WriterOptions -> Pandoc -> Html
-writePandocTrusted wo = preEscapedToMarkup . writeHtmlString wo
-
-parseMarkdown :: ReaderOptions -> Markdown -> Pandoc
-parseMarkdown ro = readMarkdown ro . T.unpack . unMarkdown
-
--- | Defaults plus Html5, minus WrapText
-yesodDefaultWriterOptions :: WriterOptions
-yesodDefaultWriterOptions = def
-  { writerHtml5     = True
-  , writerWrapText  = False
-  , writerHighlight = True
-  }
-
--- | Defaults plus Smart and ParseRaw
-yesodDefaultReaderOptions :: ReaderOptions
-yesodDefaultReaderOptions = def
-    { readerSmart    = True
-    , readerParseRaw = True
-    }
